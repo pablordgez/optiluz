@@ -4,6 +4,14 @@ import { dateKey, dayInstants, shiftDate, timeLabel } from "../src/domain/time";
 import { calendar, readSharedPlan } from "../src/share";
 import type { Plan } from "../src/domain/types";
 describe("price ingestion", () => {
+  it("rejects blank official values rather than treating them as zero", () => {
+    const data = {
+      PVPC: Array(24).fill({ Dia: "07/10/2026", PCB: "", CYM: "100" }),
+    };
+    expect(() => parseOfficial(data, "2026-10-07", "pcb")).toThrow(
+      "incompletos",
+    );
+  });
   it("accepts decimal commas, negatives and explicit MWh conversion", () => {
     const day = parseManual(
       Array(24).fill("-10,5").join(";\n"),

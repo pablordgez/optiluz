@@ -4,9 +4,11 @@ import type { PriceDay } from "../domain/types";
 export function PriceChart({ day }: { day: PriceDay }) {
   const [selected, setSelected] = useState<number | null>(null);
   const slots = buildSlots(day).filter((_, i) => i % 2 === 0);
-  const sorted = [...day.prices].sort((a, b) => a - b);
-  const cheap = sorted[Math.floor(sorted.length / 3)];
-  const expensive = sorted[Math.floor((sorted.length * 2) / 3)];
+  const lowest = Math.min(...day.prices),
+    highest = Math.max(...day.prices);
+  const spread = highest - lowest;
+  const cheap = lowest + spread / 3,
+    expensive = lowest + (spread * 2) / 3;
   const min = Math.min(0, ...day.prices),
     max = Math.max(...day.prices, 0.01);
   const s = selected === null ? null : slots[selected];
@@ -15,13 +17,13 @@ export function PriceChart({ day }: { day: PriceDay }) {
       <div className="chart-info">
         <span>
           {s
-            ? `${timeLabel(s.start, zoneFor(day.area), true)} – ${timeLabel(s.end + 1800000, zoneFor(day.area), true)}`
+            ? `${timeLabel(s.start, zoneFor(day.area), day.prices.length !== 24)} – ${timeLabel(s.end + 1800000, zoneFor(day.area), day.prices.length !== 24)}`
             : "Precio por hora"}
         </span>
         <strong>
           {s
             ? s.price.toFixed(4).replace(".", ",")
-            : `${Math.min(...day.prices).toFixed(3)} – ${Math.max(...day.prices).toFixed(3)}`}{" "}
+            : `${lowest.toFixed(3).replace(".", ",")} – ${highest.toFixed(3).replace(".", ",")}`}{" "}
           <small>€/kWh</small>
         </strong>
       </div>
@@ -45,11 +47,13 @@ export function PriceChart({ day }: { day: PriceDay }) {
                 className="bar"
                 style={{
                   background:
-                    slot.price <= cheap
-                      ? "var(--cheap)"
-                      : slot.price >= expensive
-                        ? "var(--expensive)"
-                        : "var(--medium)",
+                    spread < 1e-10
+                      ? "var(--medium)"
+                      : slot.price <= cheap
+                        ? "var(--cheap)"
+                        : slot.price >= expensive
+                          ? "var(--expensive)"
+                          : "var(--medium)",
                   height: `${Math.max(2, (Math.abs(slot.price) / (max - min)) * 100)}%`,
                   bottom: `${negative ? ((slot.price - min) / (max - min)) * 100 : (-min / (max - min)) * 100}%`,
                 }}

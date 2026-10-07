@@ -51,7 +51,10 @@ export function parseOfficial(
       r && typeof r === "object" && r.Dia === `${day}/${month}/${year}`,
   );
   const prices = rows.map((r: Record<string, unknown>) =>
-    typeof r[area === "cym" ? "CYM" : "PCB"] === "string"
+    typeof r[area === "cym" ? "CYM" : "PCB"] === "string" &&
+    /^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(
+      (r[area === "cym" ? "CYM" : "PCB"] as string).trim(),
+    )
       ? Number(
           (r[area === "cym" ? "CYM" : "PCB"] as string).replace(",", "."),
         ) / 1000

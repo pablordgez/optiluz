@@ -20,6 +20,14 @@ Node.js 22 o superior. `npm ci`, `npm run dev`. Interfaz: http://127.0.0.1:5173.
 
 Los costes son estimaciones de energía con consumo uniforme. El PVPC oficial se convierte de €/MWh a €/kWh, sin añadir impuestos, potencia contratada ni otros conceptos de factura. El límite se aplica únicamente a las cargas incluidas; se reserva margen para otros consumos configurando un límite menor. No se inventan precios cuando la fuente no está disponible. Los días de cambio de hora usan instantes reales y etiquetas con UTC para distinguir horas repetidas.
 
+Las ventanas se definen dentro del día seleccionado y no cruzan medianoche. El horario habitual se compara sin reajustar sus restricciones. Entre planes de igual coste se priorizan menos interrupciones y horas más tempranas. Las notificaciones dependen de los permisos y del funcionamiento del navegador; el ICS ofrece la alternativa de calendario.
+
+## Verificación
+
+25 pruebas automatizadas: óptimo frente a búsqueda exhaustiva, límite conjunto de potencia, continuidad, interrupciones, plazos, horas pasadas, precios negativos, cambios de hora, importación, enlace compartido, calendario y caché del proxy. CI ejecuta las pruebas y la compilación en cada push.
+
+Comprobaciones en navegador: PVPC real, importación para mañana, edición por kWh, persistencia tras recargar, claro/oscuro, vista móvil de 390 px, exportación PNG/ICS, enlace compartido y cálculo local tras detener el servidor. El navegador no tenía permisos de notificación concedidos; no se verificó la entrega real de avisos del sistema.
+
 ## Fuente
 
 [API oficial e·sios](https://api.esios.ree.es/doc/archive/download_archive.html), archivo 70 (`PVPC`, columnas `PCB`/`CYM`). Endpoint fijo con validación de fecha, timeout y caché limitada. Ningún dato doméstico se envía al servidor. Los enlaces compartidos incluyen únicamente el plan visible y sus costes en el fragmento URL.

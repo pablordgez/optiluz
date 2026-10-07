@@ -228,7 +228,9 @@ export function App() {
             err.name === "AbortError"
               ? "La consulta ha tardado demasiado. Reintenta o importa los precios."
               : navigator.onLine
-                ? err.message
+                ? err instanceof TypeError || err instanceof SyntaxError
+                  ? "No se pudieron consultar los precios. Reintenta o importa tu tarifa."
+                  : err.message
                 : "Sin conexión. Se usan los datos guardados, si están disponibles.",
           );
       })
@@ -861,7 +863,7 @@ export function App() {
             <div className="settings-divider" />
             <h2>Datos del dispositivo</h2>
             <p className="field-help">
-              Tareas, precios y planes se guardan aquí. No necesitas una cuenta.
+              Tareas, precios y planes se guardan aquí.
             </p>
             <div className="settings-actions">
               <button
@@ -886,6 +888,19 @@ export function App() {
               </button>
             </div>
             <p className="version">OptiLuz · v0.1.0</p>
+            {install && (
+              <button
+                className="button"
+                onClick={async () => {
+                  await install.prompt();
+                  if ((await install.userChoice).outcome === "accepted")
+                    setInstall(null);
+                }}
+              >
+                <Download size={16} />
+                Instalar app
+              </button>
+            )}
           </section>
         )}
         <footer className="main-footer">
