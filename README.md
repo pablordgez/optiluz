@@ -4,6 +4,8 @@ Planificador doméstico para organizar varias tareas con precios PVPC o tarifas 
 
 Es una aplicación web instalable (PWA), con modos claro y oscuro y datos guardados en tu dispositivo.
 
+Los precios de la tarifa regulada (PVPC) se obtienen automáticamente; también puedes configurar tu propia tarifa manualmente.
+
 ## Funcionalidades
 
 - **Hoy y mañana:** consulta los precios oficiales de Red Eléctrica o importa los de tu tarifa.
