@@ -42,10 +42,13 @@ export function parseOfficial(
     !("PVPC" in data) ||
     !Array.isArray(data.PVPC)
   )
-    throw new Error("La fuente no devuelve precios PVPC.");
+    throw new Error(
+      "Los precios todavía no están disponibles. Reintenta más tarde o importa tu tarifa.",
+    );
   const [year, month, day] = date.split("-");
   const rows = data.PVPC.filter(
-    (r: Record<string, unknown>) => r.Dia === `${day}/${month}/${year}`,
+    (r: Record<string, unknown>) =>
+      r && typeof r === "object" && r.Dia === `${day}/${month}/${year}`,
   );
   const prices = rows.map((r: Record<string, unknown>) =>
     typeof r[area === "cym" ? "CYM" : "PCB"] === "string"
@@ -54,7 +57,7 @@ export function parseOfficial(
         ) / 1000
       : NaN,
   );
-  const expected = dayInstants(date, "Europe/Madrid").length / 2;
+  const expected = dayInstants(date, zoneFor(area)).length / 2;
   if (
     prices.length !== expected ||
     prices.some((p) => !Number.isFinite(p) || Math.abs(p) > 10)
@@ -62,8 +65,8 @@ export function parseOfficial(
     throw new Error(
       "Los precios oficiales todavía no están disponibles o están incompletos.",
     );
-  // Canary days are shifted one real hour from the published Madrid day.
-  // The proxy stitches adjacent dates for this area before constructing a PriceDay.
+  // REE defines identical hourly prices independently of local time zones.
+  // Keep archive order, including the 25th sequential row on autumn DST days.
   return {
     date,
     area,

@@ -70,7 +70,17 @@ export function TaskEditor({
             Duración
             <select
               value={draft.duration}
-              onChange={(e) => change("duration", Number(e.target.value))}
+              onChange={(e) => {
+                const duration = Number(e.target.value);
+                setDraft((s) => ({
+                  ...s,
+                  duration,
+                  power:
+                    mode === "energy"
+                      ? (s.power * s.duration) / duration
+                      : s.power,
+                }));
+              }}
             >
               {Array.from({ length: 48 }, (_, i) => (i + 1) * 30).map((m) => (
                 <option key={m} value={m}>

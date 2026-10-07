@@ -1,5 +1,5 @@
 import type { Plan } from "./domain/types";
-import { dateKey, timeLabel } from "./domain/time";
+import { dateKey, timeLabel, dayInstants } from "./domain/time";
 import { segmentLabel } from "./domain/planner";
 export const money = (value: number) =>
   new Intl.NumberFormat("es-ES", {
@@ -43,18 +43,29 @@ export function readSharedPlan(hash: string): Plan | null {
     !Array.isArray(raw.tasks) ||
     !raw.tasks.length ||
     raw.tasks.length > 5 ||
+    !Number.isFinite(Date.parse(raw.generatedAt)) ||
+    typeof raw.optimal !== "boolean" ||
+    raw.peakPower <= 0 ||
+    raw.peakPower > 30 ||
     [raw.cost, raw.peakPower].some((v) => !Number.isFinite(v)) ||
     (raw.usualCost !== null && !Number.isFinite(raw.usualCost))
   )
     throw new Error("Enlace de plan no válido.");
+  const starts = dayInstants(raw.date, raw.zone);
+  const dayEnd = starts.at(-1)! + 1800000;
+  if (new Set(raw.tasks.map((t) => t.id)).size !== raw.tasks.length)
+    throw new Error("Enlace de plan no válido.");
   for (const t of raw.tasks) {
     if (
       typeof t.id !== "string" ||
+      t.id.length > 80 ||
       typeof t.name !== "string" ||
       t.name.length > 60 ||
       typeof t.kind !== "string" ||
       !/^#[0-9a-f]{6}$/i.test(t.color) ||
       !Number.isFinite(t.power) ||
+      t.power <= 0 ||
+      t.power > 15 ||
       !Number.isFinite(t.cost) ||
       !Array.isArray(t.segments) ||
       !t.segments.length ||
@@ -64,6 +75,7 @@ export function readSharedPlan(hash: string): Plan | null {
           !Number.isFinite(s.start) ||
           !Number.isFinite(s.end) ||
           s.end <= s.start ||
+          s.end > dayEnd ||
           s.end - s.start > 25 * 3600000 ||
           dateKey(s.start, raw.zone) !== raw.date,
       )
@@ -140,13 +152,16 @@ export function calendar(plan: Plan) {
 }
 export async function planImage(plan: Plan) {
   const canvas = document.createElement("canvas");
-  const lines = plan.tasks.flatMap((t) =>
-    t.segments.map((s) => ({
-      name: t.name,
-      time: `${timeLabel(s.start, plan.zone, true)} – ${timeLabel(s.end, plan.zone, true)}`,
-      color: t.color,
-    })),
-  );
+  const lines = plan.tasks
+    .flatMap((t) =>
+      t.segments.map((s) => ({
+        start: s.start,
+        name: t.name,
+        time: segmentLabel(s, plan.zone),
+        color: t.color,
+      })),
+    )
+    .sort((a, b) => a.start - b.start);
   canvas.width = 1000;
   canvas.height = 290 + lines.length * 90;
   const c = canvas.getContext("2d")!;

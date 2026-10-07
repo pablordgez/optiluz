@@ -26,6 +26,21 @@ const task = (overrides: Partial<Task> = {}): Task => ({
   ...overrides,
 });
 describe("joint optimizer", () => {
+  it("prefers fewer interruptions at the same minimum cost", () => {
+    const p = Array(24).fill(0.2);
+    for (let i = 12; i < 17; i++) p[i] = 0.05;
+    const plan = optimize(
+      solver,
+      templates.slice(0, 3).map((t, i) => ({ ...t, id: String(i) })),
+      day(p),
+      3.45,
+      0,
+    );
+    expect(plan.cost).toBeCloseTo(0.375);
+    expect(plan.tasks.find((t) => t.kind === "heater")!.segments).toHaveLength(
+      1,
+    );
+  });
   it("selects the cheapest continuous window, including half-hour starts", () => {
     const p = Array(24).fill(0.5);
     p[10] = 0.1;

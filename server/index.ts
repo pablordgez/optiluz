@@ -19,12 +19,9 @@ app.get("/api/prices", async (req, res) => {
       .set("Cache-Control", "public, max-age=300")
       .json(await fetchPrices(date, area as Area));
   } catch (error) {
-    res
-      .status(503)
-      .json({
-        error:
-          error instanceof Error ? error.message : "Precios no disponibles.",
-      });
+    res.status(503).json({
+      error: error instanceof Error ? error.message : "Precios no disponibles.",
+    });
   }
 });
 app.use("/api", (_, res) => {

@@ -14,6 +14,8 @@
   --cheap: #9dcc58;
   --medium: #edc366;
   --expensive: #e58b7f;
+  --positive: #4f761e;
+  --error: #b9493e;
   --shadow: 0 12px 60px #20310e15;
   color-scheme: light;
 }
@@ -30,6 +32,8 @@
   --cheap: #8ab54b;
   --medium: #d6af56;
   --expensive: #c87c72;
+  --positive: #b9ef58;
+  --error: #ee9b92;
   --shadow: 0 12px 60px #0008;
   background: #080808;
   color: #f1f3ed;
@@ -268,7 +272,7 @@ nav button.nav-active {
   color: var(--muted);
   font-size: 12px;
   margin-bottom: 8px;
-  text-transform: capitalize;
+  text-transform: none;
 }
 .segmented {
   background: var(--soft);
@@ -607,7 +611,7 @@ nav button.nav-active {
   font-variant-numeric: tabular-nums;
 }
 .plan-stats .saving {
-  color: var(--cheap);
+  color: var(--positive);
 }
 .scheduled-task {
   display: flex;
@@ -801,10 +805,10 @@ nav button.nav-active {
   line-height: 1.5;
 }
 .notice.error {
-  color: var(--expensive);
+  color: var(--error);
 }
 .error-text {
-  color: var(--expensive);
+  color: var(--error);
 }
 .price-warning {
   font-size: 11px;
@@ -894,7 +898,7 @@ textarea {
   margin-right: auto;
 }
 .danger-button {
-  color: var(--expensive);
+  color: var(--error);
 }
 .settings-panel {
   max-width: 720px;

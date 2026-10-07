@@ -1,5 +1,12 @@
 import type { LegacyHighs } from "highs";
-import { buildSlots, timeLabel, zoneFor, clockMinute } from "./time";
+import {
+  buildSlots,
+  timeLabel,
+  zoneFor,
+  clockMinute,
+  dayInstants,
+  dateKey,
+} from "./time";
 import type { Task, PriceDay, Slot, Plan, Segment } from "./types";
 export interface Candidate {
   name: string;
@@ -99,7 +106,35 @@ export function buildModel(
       equations.push(`power${i}: ${expression(terms)} <= ${maxPower}`);
   });
   const lp = `Minimize\n cost: ${expression(candidates.map((c) => ({ name: c.name, value: c.cost })))}\nSubject To\n ${equations.join("\n ")}\nBinary\n ${candidates.map((c) => c.name).join(" ")}\nEnd`;
-  return { lp, candidates, slots };
+  const tieModel = (minimumCost: number) => {
+    const switches: string[] = [];
+    const extra: string[] = [];
+    tasks.forEach((task, ti) => {
+      if (!task.interruptible) return;
+      const vars = candidates.filter((c) => c.taskIndex === ti);
+      vars.forEach((candidate, i) => {
+        const name = `y${ti}_${i}`;
+        switches.push(name);
+        const previous = vars[i - 1];
+        const adjacent =
+          previous && previous.slots[0] + 1 === candidate.slots[0];
+        extra.push(
+          `switch${ti}_${i}: + 1 ${name} - 1 ${candidate.name}${adjacent ? ` + 1 ${previous.name}` : ""} >= 0`,
+        );
+      });
+    });
+    // Monetary optimum first, then fewer starts and earlier slots.
+    // The small index weights cannot outweigh one extra interruption.
+    const objective = expression([
+      ...switches.map((name) => ({ name, value: 1 })),
+      ...candidates.map((c) => ({ name: c.name, value: c.slots[0] / 100000 })),
+    ]);
+    const cost = expression(
+      candidates.map((c) => ({ name: c.name, value: c.cost })),
+    );
+    return `Minimize\n ease: ${objective}\nSubject To\n ${[...equations, ...extra, `cost_bound: ${cost} <= ${(minimumCost + 1e-8).toFixed(10)}`].join("\n ")}\nBinary\n ${[...candidates.map((c) => c.name), ...switches].join(" ")}\nEnd`;
+  };
+  return { lp, candidates, slots, tieModel };
 }
 export function mergeSegments(indices: number[], slots: Slot[]): Segment[] {
   const segments: Segment[] = [];
@@ -117,8 +152,13 @@ export function optimize(
   maxPower: number,
   now = Date.now(),
 ): Plan {
-  const { lp, candidates, slots } = buildModel(tasks, day, maxPower, now);
-  const result = highs.solve(lp, {
+  const { lp, candidates, slots, tieModel } = buildModel(
+    tasks,
+    day,
+    maxPower,
+    now,
+  );
+  let result = highs.solve(lp, {
     output_flag: false,
     time_limit: 8,
     mip_rel_gap: 0,
@@ -131,6 +171,15 @@ export function optimize(
     throw new Error(
       "No se ha encontrado un plan válido. Ajusta las ventanas y vuelve a calcular.",
     );
+  const optimal = result.Status === "Optimal";
+  if (optimal && Number.isFinite(result.ObjectiveValue)) {
+    const practical = highs.solve(tieModel(result.ObjectiveValue), {
+      output_flag: false,
+      time_limit: 3,
+      mip_rel_gap: 0,
+    });
+    if (practical.Status === "Optimal") result = practical;
+  }
   const load = slots.map(() => 0);
   const planned = tasks.map((t, ti) => {
     const chosen = candidates.filter(
@@ -182,9 +231,11 @@ export function optimize(
     cost: planned.reduce((s, t) => s + t.cost, 0),
     usualCost,
     peakPower: Math.max(...load),
-    optimal: result.Status === "Optimal",
+    optimal,
     generatedAt: new Date().toISOString(),
   };
 }
-export const segmentLabel = (s: Segment, zone: string) =>
-  `${timeLabel(s.start, zone, true)} – ${timeLabel(s.end, zone, true)}`;
+export const segmentLabel = (s: Segment, zone: string) => {
+  const showOffset = dayInstants(dateKey(s.start, zone), zone).length !== 48;
+  return `${timeLabel(s.start, zone, showOffset)} – ${timeLabel(s.end, zone, showOffset)}`;
+};

@@ -27,9 +27,11 @@ export function clockMinute(time: number, zone: string) {
   );
 }
 export function dayInstants(date: string, zone: string): number[] {
+  const parsed = new Date(`${date}T12:00:00Z`);
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-    new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date
   )
     throw new Error("Fecha no válida.");
   const midday = Date.parse(`${date}T12:00:00Z`);

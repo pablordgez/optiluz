@@ -45,6 +45,7 @@ import { PlanView } from "./components/PlanView";
 import { TaskEditor } from "./components/TaskEditor";
 import { TaskIcon } from "./components/TaskIcon";
 import { Modal } from "./components/Modal";
+import { PowerLimit } from "./components/PowerLimit";
 
 interface InstallPrompt extends Event {
   prompt(): Promise<void>;
@@ -80,6 +81,9 @@ export function App() {
     error: boolean;
   } | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
+  const [systemDark, setSystemDark] = useState(
+    () => matchMedia("(prefers-color-scheme: dark)").matches,
+  );
   const [install, setInstall] = useState<InstallPrompt | null>(null);
   const [shared, setShared] = useState(sharedOnLoad);
   const worker = useRef<Worker | null>(null);
@@ -91,6 +95,9 @@ export function App() {
   const day = state.prices[key];
   const plan = state.plans[key];
   const active = state.tasks.filter((t) => t.enabled);
+  const dark =
+    state.settings.theme === "dark" ||
+    (state.settings.theme === "system" && systemDark);
   const alertUser = (message: string, error = false) =>
     setFeedback({ message, error });
 
@@ -154,6 +161,7 @@ export function App() {
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
+      setSystemDark(media.matches);
       const theme =
         state.settings.theme === "system"
           ? media.matches
@@ -475,27 +483,14 @@ export function App() {
           </span>
           <button
             className="icon-button theme-shortcut"
-            aria-label={
-              document.documentElement.dataset.theme === "dark"
-                ? "Activar modo claro"
-                : "Activar modo oscuro"
-            }
+            aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}
             onClick={() =>
               changeSetting({
-                theme:
-                  document.documentElement.dataset.theme === "dark"
-                    ? "light"
-                    : "dark",
+                theme: dark ? "light" : "dark",
               })
             }
           >
-            {state.settings.theme === "dark" ||
-            (state.settings.theme === "system" &&
-              matchMedia("(prefers-color-scheme: dark)").matches) ? (
-              <Sun size={19} />
-            ) : (
-              <Moon size={19} />
-            )}
+            {dark ? <Sun size={19} /> : <Moon size={19} />}
           </button>
         </header>
         <div className="page-heading">
@@ -710,22 +705,12 @@ export function App() {
                     <label htmlFor="max-power">
                       Límite simultáneo <span>Solo las tareas del plan</span>
                     </label>
-                    <div className="unit-input">
-                      <input
-                        id="max-power"
-                        type="number"
-                        min="0.05"
-                        max="30"
-                        step="0.05"
-                        disabled={busy}
-                        value={state.settings.maxPower}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (v > 0 && v <= 30) changeSetting({ maxPower: v });
-                        }}
-                      />
-                      <span>kW</span>
-                    </div>
+                    <PowerLimit
+                      value={state.settings.maxPower}
+                      disabled={busy}
+                      onSave={(v) => changeSetting({ maxPower: v })}
+                      onError={(message) => alertUser(message, true)}
+                    />
                   </div>
                   <button
                     className="primary calculate"
@@ -1013,6 +998,10 @@ export function App() {
               las demás mantienen un ciclo continuo.
             </p>
             <h3>Recordatorios</h3>
+            <p>
+              La comparación con el horario habitual conserva su hora de inicio,
+              sin ajustar sus solapamientos ni ventanas permitidas.
+            </p>
             <p>
               Los avisos locales requieren permiso y la app abierta. El
               calendario descargable incluye avisos cinco minutos antes y

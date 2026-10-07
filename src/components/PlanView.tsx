@@ -36,7 +36,6 @@ export function PlanView({
   const starts = dayInstants(plan.date, plan.zone);
   const dayStart = starts[0],
     dayLength = starts.length * 1800000;
-  const canShare = "share" in navigator;
   const action = async (
     fn: () => Promise<unknown> | unknown,
     message?: string,
@@ -118,10 +117,7 @@ export function PlanView({
         <span>{plan.optimal ? "Coste mínimo" : "Mejor plan encontrado"}</span>
       </div>
       {plan.usualCost !== null && (
-        <p className="field-help">
-          Horario habitual: {money(plan.usualCost)}. Comparación sin ajustar
-          solapamientos ni ventanas del horario habitual.
-        </p>
+        <p className="field-help">Horario habitual: {money(plan.usualCost)}</p>
       )}
       <p className="field-help">
         Consumo medio estimado ·{" "}
@@ -171,16 +167,8 @@ export function PlanView({
           <button
             onClick={() =>
               action(
-                async () => {
-                  const url = shareLink(plan);
-                  if (canShare)
-                    await navigator.share({
-                      title: `OptiLuz · ${plan.date}`,
-                      url,
-                    });
-                  else await navigator.clipboard.writeText(url);
-                },
-                canShare ? undefined : "Enlace copiado.",
+                () => navigator.clipboard.writeText(shareLink(plan)),
+                "Enlace copiado.",
               )
             }
           >
